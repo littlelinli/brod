@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 Бродилка 0–100</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; }
+        .cell { transition: all 0.2s; }
+        .cell:hover { background-color: #f9fafb; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const BOARD_SIZE = 100;
+
+        function rollDice() {
+            return Math.floor(Math.random() * 6) + 1;
+        }
+
+        function DiceBoardGame() {
+            const [players, setPlayers] = useState([
+                { name: "Игрок 1", pos: 0, color: "#ef4444" }, // Red
+                { name: "Игрок 2", pos: 0, color: "#3b82f6" }, // Blue
+                { name: "Игрок 3", pos: 0, color: "#10b981" }, // Green
+            ]);
+
+            const [turn, setTurn] = useState(0);
+            const [dice, setDice] = useState(null);
+            const [winner, setWinner] = useState(null);
+
+            function movePlayer() {
+                if (winner) return;
+
+                const value = rollDice();
+                setDice(value);
+
+                let isWin = false;
+                let nextPos = 0;
+
+                setPlayers((prev) => {
+                    const updated = [...prev];
+                    const currentPlayer = { ...updated[turn] };
+                    
+                    nextPos = currentPlayer.pos + value;
+                    if (nextPos >= BOARD_SIZE) {
+                        nextPos = BOARD_SIZE;
+                        isWin = true;
+                    }
+                    
+                    currentPlayer.pos = nextPos;
+                    updated[turn] = currentPlayer;
+                    return updated;
+                });
+
+                if (isWin) {
+                    setWinner(players[turn].name);
+                } else {
+                    setTurn((prevTurn) => (prevTurn + 1) % players.length);
+                }
+            }
+
+            const resetGame = () => {
+                setPlayers(p => p.map(player => ({ ...player, pos: 0 })));
+                setTurn(0);
+                setDice(null);
+                setWinner(null);
+            };
+
+            return (
+                <div className="p-4 font-sans max-w-2xl mx-auto min-h-screen flex flex-col justify-center">
+                    <h1 className="text-3xl font-black mb-6 text-center text-gray-800 tracking-tight">
+                        🎲 БРОДИЛКА 0–100
+                    </h1>
+
+                    <div className="flex justify-between items-center mb-6 bg-white shadow-sm p-4 rounded-xl border border-gray-200">
+                        <div>
+                            {winner ? (
+                                <div className="animate-bounce">
+                                    <span className="text-green-600 font-bold text-xl px-3 py-1 bg-green-100 rounded-full">
+                                        🎉 {winner} победил!
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="text-lg text-gray-700">
+                                    Сейчас ходит: <b className="text-gray-900 border-b-2 border-yellow-400">{players[turn].name}</b>
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-2xl font-mono bg-gray-50 border px-4 py-1 rounded-lg shadow-inner">
+                            {dice ?? "—"}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mb-8">
+                        <button
+                            onClick={movePlayer}
+                            disabled={!!winner}
+                            className={`flex-1 py-4 rounded-xl font-black text-xl text-white shadow-lg transform active:scale-95 transition-all ${
+                                winner 
+                                ? 'bg-gray-300 cursor-not-allowed' 
+                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                            }`}
+                        >
+                            {winner ? "КОНЕЦ ИГРЫ" : "БРОСИТЬ КУБИК"}
+                        </button>
+                        
+                        {winner && (
+                            <button onClick={resetGame} className="px-6 py-4 bg-gray-800 text-white font-bold rounded-xl hover:bg-black transition-colors">
+                                🔄
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Игровое поле */}
+                    <div className="grid grid-cols-10 border-l border-t border-gray-300 shadow-2xl rounded-sm overflow-hidden">
+                        {Array.from({ length: 101 }).map((_, i) => (
+                            <div
+                                key={i}
+                                className="cell border-r border-b border-gray-300 h-14 sm:h-16 flex flex-col items-center justify-center relative bg-white"
+                            >
+                                <span className="text-[10px] font-bold text-gray-300 absolute top-1 left-1">{i}</span>
+                                <div className="flex flex-wrap justify-center gap-1 px-1">
+                                    {players.map((p, idx) => p.pos === i && (
+                                        <div 
+                                            key={idx} 
+                                            className="w-4 h-4 rounded-full border-2 border-white shadow-md animate-scale-in" 
+                                            style={{ backgroundColor: p.color, transition: 'all 0.5s ease-out' }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-8 grid grid-cols-3 gap-4">
+                        {players.map((p, i) => (
+                            <div key={i} className={`p-3 rounded-lg border-2 transition-all ${turn === i && !winner ? 'bg-white border-yellow-400 scale-105 shadow-md' : 'bg-transparent border-transparent opacity-60'}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                                    <span className="font-bold text-sm">{p.name}</span>
+                                </div>
+                                <div className="text-xs text-gray-500 italic">Позиция: {p.pos}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DiceBoardGame />);
+    </script>
+</body>
+</html>
